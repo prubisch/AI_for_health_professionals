@@ -2,7 +2,7 @@ import seaborn as sns
 
 # Import data from shared.py
 # for modularisation we use the shiny core syntax
-from shared import df
+#from shared import df
 from shiny import App, ui, render, reactive
 from simple_AI_examples import simple_AI_page, server_AI_examples
 
