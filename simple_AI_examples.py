@@ -45,7 +45,7 @@ def simple_regression(deg, N_train , N_test):
     train_data, test_data, ground_truth = dataset_gen(N_train, N_test)
 
     reg = LinearRegression()
-    poly_reg = Pipeline([("polynomial_features",PolynomialFeatures(degree = deg, include_bias = False)),
+    poly_reg = Pipeline([("polynomial_features",PolynomialFeatures(degree = deg, include_bias = True)),
     ("linear_regression", reg),])
     poly_reg.fit(train_data[0].reshape(-1,1), train_data[1])
 
@@ -57,14 +57,14 @@ def simple_regression(deg, N_train , N_test):
 
 
 def gen_data_clustering(N1, N2, N3): 
-    #1st dimension is coughing frequency [normalised, 0 for normal]
-    #2nd dimension is the average activity level per week [normalised, 0 for normal]
-    mean_smoker = np.array([0.5,0])
-    sigma_smoker = np.array([0.7,0.5])
-    mean_athletes = np.array([-0.5,0.5])
-    sigma_athletes = np.array([0.5, 0.2])
-    mean_normal = np.array([0,0])
-    sigma_normal = np.array([0.5, 0.5])
+    #1st dimension is coughing frequency
+    #2nd dimension is the average activity level per week
+    mean_smoker = np.array([10,4])
+    sigma_smoker = np.array([5,2])
+    mean_athletes = np.array([2,10])
+    sigma_athletes = np.array([2, 1])
+    mean_normal = np.array([5,6])
+    sigma_normal = np.array([0.5, 3])
 
     rng = np.random.default_rng(seed = 42)
     dat_smokers = mean_smoker + sigma_smoker * rng.standard_normal(size = (N1, 2))
@@ -72,8 +72,18 @@ def gen_data_clustering(N1, N2, N3):
     dat_normal = mean_normal + sigma_normal * rng.standard_normal(size = (N3, 2))
 
     dat_complete = np.vstack([dat_smokers, dat_athletes, dat_normal])
-    means_complete = np.vstack([mean_smoker, mean_athletes, mean_normal])
-    return dat_complete, dat_smokers, dat_athletes, dat_normal, means_complete
+    dat_normalised = (dat_complete - np.mean(dat_complete, axis = 0))/np.std(dat_complete, axis = 0)
+    
+    #normalising the datasets: 
+    dat_smokers = (dat_smokers - np.mean(dat_complete, axis = 0))/np.std(dat_complete, axis = 0)
+    dat_athletes = (dat_athletes - np.mean(dat_complete, axis = 0))/np.std(dat_complete, axis = 0)
+    dat_normal = (dat_normal - np.mean(dat_complete, axis = 0))/np.std(dat_complete, axis = 0)
+
+    means_complete = np.vstack([np.mean(dat_smokers, axis = 0) , np.mean(dat_athletes, axis = 0), np.mean(dat_normal, axis = 0)])
+    std_complete = np.vstack([np.std(dat_smokers, axis = 0) , np.std(dat_athletes, axis = 0), np.std(dat_normal, axis = 0)])
+    
+
+    return dat_complete, dat_normalised, dat_smokers, dat_athletes, dat_normal, means_complete, std_complete
 
 def train_clf_bcw(layers = (30,10), features = None): 
     if features: 
@@ -156,9 +166,9 @@ simple_AI_page = ui.page_fluid(
         ui.p("Um eine Funktion systematisch zu finden und damit eine Regression zu berechnen, optimierieren wird eine Metrik die 'mean-square error' (MSE) heißt. Der MSE misst den Abstand zwischen der Funktion ($\hat{y}$) und den Datenpunkten ($y$). Die optimierte Regressionsfunktion ist die Funktion, welche den kleinsten MSE hat."),
         ui.p(f"Ein $MSE = 0$ bedeuted, dass alle Datenpunkte auf der optimierten Funktion liegen. Funktion 1 hat ein MSE von $MSE(F1,y) =${MSE1:.2f} und Funktion 2 hat ein MSE von $MSE(F2,y) = ${MSE2:.2f}. Entspricht dies Ihrer Vermutung? ", ui.br(),"Die optimierte Regressionsfunktion wird oft auch als das 'Model' der Daten bezeichnet."),ui.br(), 
         "(Regressions-)Modelle werden durch die Anzahl ihrer Parameter charakterisiert. Je mehr Parameter ein Modell hat, desto komplexer die zugrundelegende Beziehungen. Die Anzahl der Parameter einer Regression lässt sich intuitiv als die Anzahl der Terme der Funktion verstehen: ", ui.br(), 
-        "Funktion 1 hat 2 Parameter, da sie eine quadratische Funktion ist: $$\hat{y} = a x^0 + b x^1 + c x^2.$$" , ui.br(),
-        "Funktion 2 hat 3 Parameter. Sie ist eine kubische Funktion: $$\hat{y} = a x^0+ b x^1 + c x^2 + d x^3.$$ ", 
-        ui.p("Der erste Term $a x^0$ wird oft vereinfacht geschrieben als $a$, da $x^0$ eine constante Funktion mit Wert 1 ist. Da der Term eine Konstante ist, wird sie 'Bias' genannt. Eine Funktion mit 4 Parameter würde uns erlauben einen Term mit der Potenz 4 im Modell zu adiren. Eine Visualisering, wie sich die Funktionen mit der Anzahl der Parametern verändert sehen sie hier:"), 
+        "Funktion 1 hat 3 Parameter, da sie eine quadratische Funktion ist: $$\hat{y} = a x^0 + b x^1 + c x^2.$$" , ui.br(),
+        "Funktion 2 hat 4 Parameter. Sie ist eine kubische Funktion: $$\hat{y} = a x^0+ b x^1 + c x^2 + d x^3.$$ ", 
+        ui.p("Der erste Term $a x^0$ wird oft vereinfacht geschrieben als $a$, da $x^0 = 1$ für alle $x$. Da der Term eine Konstante ist, wird sie auch als 'Offset' bezeichnet. Eine Funktion mit 5 Parameter würde uns erlauben einen Term mit der Potenz 4 im Modell zu addieren. Eine Visualisering, wie sich die Funktionen mit der Anzahl der Parametern verändert sehen sie hier:"), 
         ui.output_plot("param_explanation"),
         "Im folgenden versuchen wir die Ergebnisse des folgenden (fiktiven) Beispiel mit einer Regression zu beschreiben. Es wurde die Testleistung von Probanden abhängig von der Zeit, die sie zum Lernen hatten gemessen. Die Verbesserung (im 2. Testzeitpunk im Vergleich zum 1. Testzeitpunkt) abhängig von der Lernzeit ist unten visualisiert (Figur: Gesamtdaten). Bei sämtlichen Optimierungsalgorithmus zählt es zum Standardverfahren die Gesamtdaten in ein Trainings- und Testset zu unterteilen. Die Figur 'Trainings-/Testset' zeigt eine solche Aufteilung. Aufgrund der Aufteilung berechnet man auch einen Trainings-MSE und einen Test-MSE. Warum könnte dies wichtig sein?", 
         ui.output_plot("vis_data"),
@@ -171,36 +181,32 @@ simple_AI_page = ui.page_fluid(
         "Da es sich hier um einen fiktiven Datensatz handelt, kennen wir die 'Ground Truth' und können die Funktion visualisieren, die den Gesamtdaten zugrunde liegt (Toggler 'Ground Truth'). Wie würden sie ein 'gutes' Modell charakterisieren abhängig von den MSE(s) und der Parameteranzahl?",
         ui.input_switch("show_gt", "Ground Truth", False),), 
 
-        ui.nav_panel("Gruppierung", "Gruppierung oder auch clustering (im Folgenden) sind Algorithmen, die versuchen in Gruppen einzuteilen.",
-        "Clustering ist eine unsupervised Methode. Das heißt, der Algorithmus hat keinen Label oder Klassen zur Verfügung. Die Gruppierung",
-        "erfolgt allinig auf den Merkmalen der Datenpunkt. Oft wird die Nähe der Datenpunkte als Indikator benutzt, dass sie zu der selben Gruppen",
-        "gehören. In der Regel gilt: Daten der selben Gruppe liegen nahe zueinander, während Datenpunkte anderer Gruppen weit entfernt sind.", ui.br(),
+        ui.nav_panel("Clustering", ui.HTML("<p>Clustering-Algorithmen bezeichnen Algorithmen, die die Gesamtdatenmenge in Gruppen einzuteilen. Ein wichtiger Unterschied zur Klassifizierung ist, dass die Datenmenge <b>keine</b> keine Label enthält. Daher zählt Clustering zu den <i> unsupervised Algorithmen </i>.</p> "),
+        ui.HTML("<p>Anhand der <b>Distanz</b> zwischen den einzelnen Datenpunkten, werden sie einer der n Gruppen zugeteilt. Wie bei der Regression ist die Anzahl der Cluster/Gruppen ein <b>Hyperparameter</b>, welcher vorher festgelegt werden muss. Clustering kann vereinfacht zusammengefasst werden: <i> Datenpunkte, die nah beiander liegen, sind in dem selben Cluster. Datenpunkte, die weit entfernt voneinander sind, sind in unterschiedlichen Clustern.</i></p>"),
         "Die Abbildung visulisiert dieses Prinzip:",
         ui.output_plot("explanation_clustering"),
-        "Wir befassen uns mit den folgenden (fiktiven) Datensatz in dem die Husten- und Sportfrequenz gemessen wurden. Beide Maße sind normalisiert.", 
+        ui.HTML("<p> Um die Auswirkungen der <b> Hyperparameterwahl</b> zu explorieren, beschäftigen wir uns im Folgenden mit einem (fiktiven) Datensatz zum Zusammenhang von Husten- und Sportfrequenz. Probanden haben über 4 Wochen dokumentiert, wie häufig sie Sport machen und wie häufig sie Hustenanfälle haben. Die Daten sind Frequnzen, die die durschnittliche Häufigkeit pro Woche angeben. Fällt Ihnen bei den Datenpunkten etwas auf?</p>"), 
         ui.output_plot("vis_clustering_data"),
-        "Den Algorithmus den wir nutzen um Gruppierungen zu finden heißt K-Means Clustering. Er benutzt das oben beschriebene Prinzip.",
-        "Im Folgenden können Sie über den Slider Auswählen wie viele Cluster Sie annehmen in den Daten vorhanden sind.",ui.br(),
-        "Frage: Was fällt Ihnen auf? Wie viele Cluster vermuten Sie sind in den Daten wirklich vorhanden?",ui.br(), ui.br(),
+        ui.input_switch("show_normed_dat", "Normalisiert", True),
+        ui.HTML("<p> Der Datensatz ist normalisiert und es gibt negative Frequenzen. Normalisieren der Daten ist ein Standardverfahren, damit alle Merkmale in einem Wertebereich liegen, der optimal ist, um zu optimieren. Um die Daten zu normaliseren, berechnen wir den Mittelwert $\mu = \\frac{1}{n}\sum_i{x_i}$ und die Standardabweichung $\sigma = \\frac{1}{n} \sum_i{(x_i - \mu)^2}$ und sklaieren alle Datenpunkte $x_i$ mit den Werten: $$ x_{normalised} = \\frac{x_i - \mu}{\sigma}$$ Daraus folgt, dass $\mu_{normalised} = 0$ und $\sigma_{normalised} = 1$. Mit dem Toggler können Sie zwischen der Visualisierung der Rohdaten und dem normalisierten Datensatz wechseln. </p>"),
+        ui.HTML("<p>Mit den normalisierten Daten führen wir ein Clustering durch. Der Algorithmus wird $K$-Means Clustering genannt. $K$ bezeichnet hier auch die Anzahl der Cluster, die benutzt wird. Mit dem Slider können Sie $K$ verändern. </p>"),
+        
         ui.div(ui.div(ui.input_slider("clusters", "Anzahl Cluster", min = 2, max=10, value = 5), style = "text-align:center;"),style = "display:flex; justify-content:center;"),
         ui.output_plot("vis_kmean_cluster"),
-        "Mit den Button unten können Sie sich die wirklich Datenverteilung anzeigen lassen.",
+        ui.br(),
+        "Was fällt Ihnen auf? Wie viele Cluster vermuten Sie sind in den Daten wirklich vorhanden?",ui.br(), ui.br(),
+        "Da es sich hier wieder um einen fiktiven Datensatz handelt, wissen wir wie viele Cluster verwendet wurden um das Datenset zu generieren. Mit dem Toggle, können Sie sich die zugrundelegende Clustergrenzen anzeigen lassen. ",
         ui.input_switch("show_gt_clustering", "Ground Truth", False),
+        ui.HTML("<p>Dadurch das Clustering keine Labels verwendet und diese generell unbekannt sind, gibt es kein <i>korrektes</i> Clustering. In unseren Beispiel sehen wir, dass der große Überlapp zwischen Gruppe 1 und 3 dazu führt, dass der K-Mean Algorithmus Cluster berechnet, die weniger Überlapp haben. Können Sie erklären warum dies so ist?</p>")
         ),
 
-        ui.nav_panel("Klassifikation", "Klassifikations-Algorithmen versuchen Datensätzen mit vielen Eigenschaften in die angegebenen Klassen zu gruppieren.", 
-        "Konkret bedeutet dies, dass wir für die Trainingsdaten die Klassenzugehörigkeit kennen. Die Testdaten sind allerdings Datenpunkte bei denen wir nicht wissen", 
-        "welcher Klasse der Datenpunkt angehört. Das Ziel ist es den neuen Daten die korrekte Klasse zuzuweisen.", ui.br(), 
-        "Mathematisch versucht ein Klassifizierungsalgorithmus Funktionen zu finden, die die Grenzen zwischen den Klassen optimal beschreiben.",
-        "Diese werden unter der folgenden Bedingungen optimiert: ",
-        "Die maximale Anzahl an Trainingspunkten sollen richtig klassifiziert werden.", ui.br(),
-        "Die meisten Algorithmen implementieren weitere Bedingungen, die den Parameterraum einschränken.",
-        "Klassifizierungsalgorithmen können folgenderweise visualisiert werden: ", 
-        ui.output_plot("toy_data_3D"),
-        "Die unterschiedlich gefärbten Bereiche zeigen an, welche Klasse für Datenpunkte an diesen Stellen prediziert würde.", 
-        "Sie können die Anzahl der Parameter mit dem folgenden Slider einstellen.", 
+        ui.nav_panel("Klassifikation", ui.HTML("<p>Im Gegensatz zu Clustering, benötigen Klassifikations-Algorithmen Labels, um zu predizieren welcher Datenpunk zu welcher Klasse gehört. Daher zählen Klassifizierungs-Algorithmen zu den <b>supervised</b> KI-Techniken. Die Funktionsweise kann vereinfacht beschrieben werden als: <i>Klassifizierungsalgorithmen optimieren Funktionen, die den (hochdimensionalen) Merkmalsraum so unterteilen, dass die höchste Anzahl an Datenpunkte korrekt klassifiziert werden.</i></p>"), 
+        ui.HTML("<p>Dies bedeuted wir berechnen die <b>Accuracy</b> hinsichtlich des Klassenlabels und optimieren unser System basierend auf den Fehlern. Daher müssen wir auch wieder unsere Gesamtdatenmenge in ein Trainings- und Testset unterteilen. Die Trainingsset werden während der Optimierung verwendet, um das System zu trainieren und die Testdaten dienen der objektiven Bestimmung der Güte des trainierten Algorithmus.</p>"), 
+        ui.br(), 
+        ui.HTML("<p>Im folgenden benutzen wir den fiktiven Datensatz des Clusterings, um die Funktionsweise der Klassifizierung zu visualisieren. Allerdings haben unsere Daten ein weiteres Merkmal neben der Husten- und Sportfrequenz: die <b>Gruppe</b>. Die Entscheidungsfunktion des Algorithmus ist dargestellt durch die eingefärbte Fläche im Merkmalsraum. Alle Punkte, die im blauen Bereich sind, werden als Gruppe 1 zugehörig klassifiziert.</p>"), 
+        ui.output_plot("toy_data_3D"), 
+        ui.HTML("<p>Wie auch zuvor besitzen Klassifizierung <b> Hyperparameter</b>, die wir zuvor festlegen müssen. In diesem Fall ist es die Anzahl der Parameter. Eine nähere Erläuterung finden Sie weiter unten im 30-dimensionalen Klassifizierungsproblem. Die Auswahl ermöglicht Ihnen die Parameter im oberen Beispiel zu varriieren. Was fällt Ihnen auf? Gibt es Punkte, die immer falsch klassifiziert werden? Woran könnte dies liegen? </p>"), 
         ui.input_select("layers", "Parameter:", ["2","10","50","100","500"] ), 
-        "Was fällt Ihnen auf?", ui.br(), ui.br(),
         "Im Folgenden beschäftigen wir uns mit dem 'breast cancer Wisconsin' Datensatz. ", ui.br(), 
         "Dieser beinhaltet 569 Messpunkte mit jeweils 30 Eigenschaften. Die Datenpunkte sind in 2 Klassen eingeteilt: 'malignant' and 'benign'. Die Tabelle zeigt ihnen die ersten 5 Messpunkte an.", 
         ui.output_data_frame("class_data"),
@@ -270,7 +276,7 @@ def server_AI_examples(input):
     @render.plot
     def regression_plot():
 
-        dat_train, pred_train, dat_test, pred_test, real_data = simple_regression(input.fl1(), n_train, n_test)
+        dat_train, pred_train, dat_test, pred_test, real_data = simple_regression(input.fl1()-1, n_train, n_test)
         fig, ax = plt.subplots(1,2)
         ax[0].scatter(dat_train[0], dat_train[1], color = palette[0], label = 'Daten')
         ax[0].plot(dat_train[0], pred_train, color = palette[2], label = 'Model')
@@ -297,49 +303,80 @@ def server_AI_examples(input):
         for i in range(6): 
             if i > 0: 
                 fun_normed = factors[i]/np.abs(np.min(factors[i]) - np.max(factors[i]))
-                plt.plot(x_range, fun_normed, label = str(i)+' Parameter')
+                plt.plot(x_range, fun_normed, label = str(i+1)+' Parameter')
             else: 
                 fun_normed = factors[i]
-                plt.plot(x_range, fun_normed, label = 'Bias')
+                plt.plot(x_range, fun_normed, label = 'Offset')
         plt.legend(bbox_to_anchor=(1.0, 1.0), loc='upper left',  frameon = False)
 
     
 
     @render.plot
     def reg_explanation():
-        plt.scatter(np.arange(10),true, label = 'Daten')
-        plt.plot(np.arange(10), m1,  color = palette[2], label = 'Funktion 1')
-        plt.plot(np.arange(10), m2, color = palette[1], label = 'Funktion 2')
-        plt.legend(bbox_to_anchor=(1.0, 1.0), loc='upper left',  frameon = False)
+        with plt.xkcd():
+            plt.scatter(np.arange(10),true, label = 'Daten')
+            plt.plot(np.arange(10), m1,  color = palette[2], label = 'Funktion 1')
+            plt.plot(np.arange(10), m2, color = palette[1], label = 'Funktion 2')
+            plt.legend(bbox_to_anchor=(1.0, 1.0), loc='upper left',  frameon = False)
         
     
 
 
     @render.plot
     def explanation_clustering():
-        plt.scatter(np.arange(10), np.arange(10))
+        from matplotlib.patches import Ellipse
+        rng = np.random.default_rng(seed = 42)
+        group1 = np.array([2,1]) + np.array([0.5,0.5]) * rng.standard_normal(size = (25,2))
+        group2 = np.array([1,2]) + np.array([0.5, 0.75]) * rng.standard_normal(size = (20,2))
+        group3 = np.array([3,2]) + np.array([0.75,0.2]) * rng.standard_normal(size = (25,2))
+        
+        with plt.xkcd():
+            fig, ax = plt.subplots(1,1)
+            ax.scatter(group1[:,0], group1[:,1], color = palette[0])
+            ax.add_artist(Ellipse((2,1),1.5,1.5, angle = 0, alpha = 0.1, color = palette[0]))
+            ax.text(1, 0.75, "Cluster 2", fontsize = 20, color = palette[0], ha = 'center', va = 'center')
+            ax.scatter(group2[:,0], group2[:,1], color = palette[1])
+            ax.add_artist(Ellipse((1,2),1.5,2.25, angle = -25, alpha = 0.1, color = palette[1]))
+            ax.text(1, 3, "Cluster 1", fontsize = 20, color = palette[1], ha = 'center', va = 'center')
+            ax.scatter(group3[:,0], group3[:,1], color = palette[2])
+            ax.add_artist(Ellipse((3,2),3,1, angle = 0, alpha = 0.1, color = palette[2]))
+            ax.text(3, 2.5, "Cluster 3", fontsize = 20, color = palette[2], ha = 'center', va = 'center')
+            ax.plot([1.26, 1.34], [2.382, 2.55], color = 'k')
+            ax.text(1.45, 2.425, "$d_{in}$", fontsize = 16, color = 'k', ha = 'center', va = 'center', rotation = -13)
+            ax.plot([1.28, 2.2], [2.315, 2.05], color = 'grey')
+            ax.text(1.7, 2.1, "$d_{between}$", fontsize = 16, color = 'grey', ha = 'center', va = 'center', rotation = -13 )
+            ax.text(4,1, "$d_{in} < d_{between}$", ha = 'center', va = 'center')
+        
 
     @render.plot
     def vis_clustering_data(): 
-        comp, _, _, _ ,_= gen_data_clustering(n_cluster, n_cluster, n_cluster)
-        fig, ax = plt.subplots(1,1)
-        ax.scatter(comp[:,0], comp[:,1])
+        comp, normed, _, _, _ ,_,_= gen_data_clustering(n_cluster, n_cluster, n_cluster)
+        fig, ax = plt.subplots(1,1) 
+        if input.show_normed_dat():
+            #not sure if flipping is better or putting it on top
+            ax.scatter(normed[:,0], normed[:,1])
+        #if not  input.show_normed_dat():
+        else: 
+            ax.scatter(comp[:,0], comp[:,1])
         ax.set_xlabel("Hustenfrequenz")
         ax.set_ylabel("Sportfrequenz")
 
     @render.plot
     def vis_kmean_cluster():
-
-        comp, smoke, ath, norm,means = gen_data_clustering(n_cluster, n_cluster, n_cluster)
+        from matplotlib.patches import Ellipse
+        nnormed, comp, smoke, ath, norm,means, stds = gen_data_clustering(n_cluster, n_cluster, n_cluster)
         kmeans_cluster = KMeans(n_clusters = input.clusters(), random_state = 42, n_init = "auto").fit(comp)
         if input.show_gt_clustering(): 
             fig, ax = plt.subplots(1,2)
-            ax[1].scatter(smoke[:,0], smoke[:,1], color = palette[0], label = 'Bauarbeiter')
-            ax[1].scatter(ath[:,0], ath[:,1], color = palette[1], label = 'Athleten')
-            ax[1].scatter(norm[:,0], norm[:,1], color = palette[2], label = 'Lehrer') 
+            ax[1].scatter(smoke[:,0], smoke[:,1], color = palette[0], label = 'Gruppe 1')
+            ax[1].scatter(ath[:,0], ath[:,1], color = palette[1], label = 'Gruppe 2')
+            ax[1].scatter(norm[:,0], norm[:,1], color = palette[2], label = 'Gruppe 3') 
             for i in range(means.shape[0]):
                 ax[1].scatter(means[i,0], means[i,1], color = palette[i], marker = '*', s = 40, edgecolors = 'k')
             ax[1].legend(bbox_to_anchor=(1.0, 1.0), loc='upper left',  frameon = False)
+            ax[1].add_artist(Ellipse((means[0]),stds[0,0]*5,stds[0,1]*5, angle = 0, alpha = 0.1, color = palette[0]))
+            ax[1].add_artist(Ellipse((means[1]),stds[1,0]*5,stds[1,1]*5, angle = 25, alpha = 0.1, color = palette[1]))
+            ax[1].add_artist(Ellipse((means[2]),stds[2,0]*5,stds[2,1]*5, angle = 180, alpha = 0.1, color = palette[2]))
             ax[1].set_xlabel("Hustenfrequenz")
             ax[1].set_ylabel("Sportfrequenz")
             ax[1].set_title("Ground Truth")
@@ -349,6 +386,7 @@ def server_AI_examples(input):
             ax[0].set_xlabel("Hustenfrequenz")
             ax[0].set_ylabel("Sportfrequenz")
             ax[0].set_title("Model")
+
         else: 
             fig, ax = plt.subplots(1,1)
             scatter = ax.scatter(comp[:,0], comp[:,1], c = kmeans_cluster.labels_)
@@ -356,17 +394,21 @@ def server_AI_examples(input):
             ax.legend(*scatter.legend_elements(),bbox_to_anchor=(1.0, 1.0), loc='upper left',  frameon = False)
             ax.set_xlabel("Hustenfrequenz")
             ax.set_ylabel("Sportfrequenz")
+            
+        
 
     @render.plot
     def toy_data_3D():
 
-        data, _, _, _, means = gen_data_clustering(n_cluster, n_cluster, n_cluster)
+        nndata, data, _, _, _, _, _ = gen_data_clustering(n_cluster, n_cluster, n_cluster)
 
         labels = np.zeros([n_cluster*3])
         labels[n_cluster:n_cluster*2] = 1
         labels[n_cluster*2:] = 2
 
-        clf = MLPClassifier(hidden_layer_sizes = (np.int(input.layers()),), random_state=42, max_iter = 1000 ).fit(data, labels)
+        x_train, x_test, y_train, y_test = train_test_split(data, labels, test_size = 0.2, random_state= 42)
+
+        clf = MLPClassifier(hidden_layer_sizes = (np.int(input.layers()),), random_state=42, max_iter = 1000 ).fit(x_train, y_train)
 
         samples = 100
         x_decs, y_decs = np.meshgrid(np.linspace(data[:,0].min()-0.5, data[:,0].max()+0.5,samples), np.linspace(data[:,1].min()-0.5, data[:,1].max()+0.5,samples))
@@ -389,10 +431,12 @@ def server_AI_examples(input):
 
         fig, ax = plt.subplots(1,1)
         ax.contourf(x_decs, y_decs, class_regime, cmap = cm_3D, alpha = 0.75)
-        scatter = ax.scatter(data[:,0],data[:,1], c = (labels*0.5), cmap = cm_bright3D , edgecolors = 'k')
-        scatter = ax.scatter(means[:,0],means[:,1], c = [0,0.5,1], cmap = cm_bright3D , edgecolors = 'k', marker = '*', s = 40)
-        handles = scatter.legend_elements()[0]
-        ax.legend(handles, ['Bauarbeiter','Athleten','Lehrer'],bbox_to_anchor=(1.0, 1.0), loc='upper left',  frameon = False)
+        scatter1 = ax.scatter(x_train[:,0],x_train[:,1], c = (y_train*0.5), cmap = cm_bright3D , edgecolors = 'k')
+        handles = scatter1.legend_elements()[0]
+        ax.legend(handles, ['Gruppe 1','Grupp 2','Gruppe 3'],title= 'Trainingsset', bbox_to_anchor=(1.0, 1.0), loc='upper left',  frameon = False)
+        scatter2 = ax.scatter(x_test[:,0],x_test[:,1], c = (y_test*0.5), cmap = cm_bright3D , edgecolors = 'k',marker = "*" )
+        handles = scatter2.legend_elements()[0]
+        ax.legend(handles, ['Gruppe 1','Grupp 2','Gruppe 3'],title= 'Testset', bbox_to_anchor=(1.0,0.5), loc='upper left',  frameon = False)
         ax.set_xlabel("Hustenfrequenz")
         ax.set_ylabel("Sportfrequenz")
  
