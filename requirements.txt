@@ -1,7 +1,7 @@
 shiny
 seaborn
 pandas
-sklearn
+scikit-learn
 ast
 numpy
 fastparquet
