@@ -1,5 +1,6 @@
 import numpy as np
 from shiny import ui,render
+from shiny.types import ImgData
 from sklearn.linear_model import LinearRegression
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import PolynomialFeatures
@@ -85,11 +86,9 @@ def gen_data_clustering(N1, N2, N3):
 
     return dat_complete, dat_normalised, dat_smokers, dat_athletes, dat_normal, means_complete, std_complete
 
-def train_clf_bcw(layers = (30,10), features = None): 
-    if features: 
-        data_points = data['data'][[features[0], features[1]]].to_numpy()
-    else: 
-        data_points = data['data'].to_numpy()
+def train_clf_bcw(layers = (30,10)): 
+
+    data_points = data['data'].to_numpy()
     
 
 
@@ -108,17 +107,8 @@ def train_clf_bcw(layers = (30,10), features = None):
     scores= [[round(1-alpha_error,2), round(beta_error,2)],
             [round(alpha_error,2), round(1-beta_error,2)]]
 
-    #get a linescore for 2 dims
-    if features: 
-        samples = 100
-        x_decs, y_decs = np.meshgrid(np.linspace(data_points[:,0].min()-0.5, data_points[:,0].max()+0.5,samples), np.linspace(data_points[:,1].min()-0.5, data_points[:,1].max()+0.5,samples))
-        decs = clf.predict_proba(np.column_stack([x_decs.ravel(), y_decs.ravel()]))[:,1]
-        decs = decs.reshape(x_decs.shape)
-    
-        return data_points, decs, x_decs, y_decs
-    
-    else: 
-        return round(acc,2), scores
+
+    return round(acc,2), scores
 
 
 def make_table(data, row_labels, col_labels, row_super=None, col_super=None):
@@ -201,33 +191,35 @@ simple_AI_page = ui.page_fluid(
         ),
 
         ui.nav_panel("Klassifikation", ui.HTML("<p>Im Gegensatz zu Clustering, benötigen Klassifikations-Algorithmen Labels, um zu predizieren welcher Datenpunk zu welcher Klasse gehört. Daher zählen Klassifizierungs-Algorithmen zu den <b>supervised</b> KI-Techniken. Die Funktionsweise kann vereinfacht beschrieben werden als: <i>Klassifizierungsalgorithmen optimieren Funktionen, die den (hochdimensionalen) Merkmalsraum so unterteilen, dass die höchste Anzahl an Datenpunkte korrekt klassifiziert werden.</i></p>"), 
-        ui.HTML("<p>Dies bedeuted wir berechnen die <b>Accuracy</b> hinsichtlich des Klassenlabels und optimieren unser System basierend auf den Fehlern. Daher müssen wir auch wieder unsere Gesamtdatenmenge in ein Trainings- und Testset unterteilen. Die Trainingsset werden während der Optimierung verwendet, um das System zu trainieren und die Testdaten dienen der objektiven Bestimmung der Güte des trainierten Algorithmus.</p>"), 
+        ui.HTML("<p>Dies bedeuted wir berechnen die <b>Accuracy</b> hinsichtlich des Klassenlabels und optimieren unser System basierend auf den Fehlern. Daher müssen wir auch wieder unsere Gesamtdatenmenge in ein Trainings- und Testset unterteilen. Das Trainingsset werden während der Optimierung verwendet, um das System zu trainieren und die Testdaten dienen der objektiven Bestimmung der Güte des trainierten Algorithmus.</p>"), 
         ui.br(), 
         ui.HTML("<p>Im folgenden benutzen wir den fiktiven Datensatz des Clusterings, um die Funktionsweise der Klassifizierung zu visualisieren. Allerdings haben unsere Daten ein weiteres Merkmal neben der Husten- und Sportfrequenz: die <b>Gruppe</b>. Die Entscheidungsfunktion des Algorithmus ist dargestellt durch die eingefärbte Fläche im Merkmalsraum. Alle Punkte, die im blauen Bereich sind, werden als Gruppe 1 zugehörig klassifiziert.</p>"), 
-        ui.output_plot("toy_data_3D"), 
+        ui.output_plot("toy_data_3D_static"), 
         ui.HTML("<p>Wie auch zuvor besitzen Klassifizierung <b> Hyperparameter</b>, die wir zuvor festlegen müssen. In diesem Fall ist es die Anzahl der Parameter. Eine nähere Erläuterung finden Sie weiter unten im 30-dimensionalen Klassifizierungsproblem. Die Auswahl ermöglicht Ihnen die Parameter im oberen Beispiel zu varriieren. Was fällt Ihnen auf? Gibt es Punkte, die immer falsch klassifiziert werden? Woran könnte dies liegen? </p>"), 
         ui.input_select("layers", "Parameter:", ["2","10","50","100","500"] ), 
-        "Im Folgenden beschäftigen wir uns mit dem 'breast cancer Wisconsin' Datensatz. ", ui.br(), 
-        "Dieser beinhaltet 569 Messpunkte mit jeweils 30 Eigenschaften. Die Datenpunkte sind in 2 Klassen eingeteilt: 'malignant' and 'benign'. Die Tabelle zeigt ihnen die ersten 5 Messpunkte an.", 
+        ui.output_plot("toy_data_3D"),
+        ui.HTML("<p>Echte Datensätze sind häufig <b>hochdimensional</b>. Das heißt, es werden mehrere Merkmale pro Datenpunkt erfasst. Zudem sind die grundlenden Beziehung zwischen den Merkmalen und Gruppen unbekannt. KI (und Maschinelles Lernen) kann uns helfen die komplexen Beziehungen zwischen den Merkmalen und Klassenlabel zu approximieren. Im Folgenden beschäftigen wir uns mit dem <i>Breast Cancer Wisconsin</i> Datensatz. </p>"), ui.br(), 
+        ui.HTML("<p>Der Datensatz erfasst die Messungen von 569 Tumorschnitten für die jeweils 30 Merkmale errechnet wurden, wie z.B. der durchschnittliche Radius oder die durchschnittliche Textur. Die Gutartigkeit der Gewebeschnitte wurde bestimmt und dient als Klassenlabel: 'malignant' and 'benign'. Die Tabelle zeigt Ihnen alle Merkmale der ersten 5 Proben an."), 
         ui.output_data_frame("class_data"),
         "Um einen besseren Überblick über die Struktur und Beziehung zwischen den erhobenn Merkmalen zu erlangen, können Sie unten 2 Merkmale auswählen und sich diese darstellen lassen. Die Farbe zeigt ihnen die Klassenzugehörigkeit an.",
         ui.input_select("first_feature", "1. Merkmal:", choices = data['data'].keys().tolist()),
         ui.input_select("second_feature", "2. Merkmal:", choices = data['data'].keys().tolist()),
-        ui.output_plot("class_plot_2D"),
-        "Sehen Sie Merkmalskombinationen, bei denen sich die beiden Klassen klar von einander trennen lassen?", ui.br(),
-        "Um neue Daten automatisch zu Klassifizieren trainieren wir ein Multi-Layer-Perceptron (MLP) mit unseren hochdimensionalen Daten. Das trainierte MLP kann dann für 'neue' Messungen predizieren, ob die Biopsie von einem gut (benign) oder bösartigen (malignant) Tumor stammt.",
-        "Durch die 2 Klassen ist dies ein binäres Klassifizierungsproblem. Das heißt wir können einfach ausrechnen wie oft der Algorithmus Tumore fehldiagnostiziert. Probieren Sie aus, wie sich die Performance ändert, wenn Sie die Architektur des MLPs ändern.", ui.br(), 
-        "Info: Die Anzahl der Parameter in einem MLP ist equivalent zu dem Produkt der Neuronen pro Schicht. Das heißt unser 'Standard'-(100,15,)-MLP  hat 1500 Parameter (100 Neuronen in der 1. Schicht und 15 Neuronen in der 2. Schicht).",
+        ui.input_select("third_feature", "3. Merkmal:", choices = data['data'].keys().tolist()),
+        ui.output_plot("class_plot_3D"),
+        "Sehen Sie Merkmalskombinationen, bei denen sich die beiden Klassen klar von einander trennen lassen? Können Sie sich Funktionen vorstellen, die die Klassen von einander trennen können in 3D? Was bedeutet dies für uns, wenn wir alle 30 Merkmale berücksichtigen?", ui.br(),ui.br(),
+        ui.HTML("<p> Da wir 2 Klassen haben, lassen sich die Prediktionen in 4 Kategoriern aufteilen und bewerten:</p><ul><li>Korrekt Positiv: Spezifität</li><li>Korrekt Negativ: Sensitivität</li><li>Falsch Positiv: $\\alpha$-Fehler</li><li>Falsch Negativ: $\\beta$-Fehler</></ul>"),
+        ui.HTML("<p>Diese Begriffen sollten Ihnen aus der Statistik und Testtheorie bereits bekannt sein. Auf unseren Datensatz angewendet mit dem Ziel korrekt bösartige (malignant) Tumore zu identifizieren ergibt sich folgende Tabelle: </p>"),
+        ui.output_ui("exp_table"),
+        ui.HTML("Welche Werten würden Sie als akzeptabel empfinden?"), ui.br(),
+        ui.HTML("<p>Im folgenden trainieren wir ein <b>Multi-Layer-Perceptron (MLP)</b> mit dem Datensatz, den wir zuvor wieder in ein Test- und ein Trainingsset aufgeteilt haben. Ein MLP besteht aus mehreren Schichten von Neuronen. Die Anzahl der Schichten, wie auch die Anzahl der Neurone und deren Verbindungen in jeder Schicht wird zusammen als <b>Architektur</b> des Netzwerkes bezeichnet. Die Architektur mit all seinen Eigenschaften ist wieder ein <b>Hyperparameter</b>, den wir selber apriori (also vorher) bestimmen müssen. Um Ihnen eine bessere Vorstellung von einem MLP zu geben, zeigt die Architektur eines (100,15)-MLP. Die zahlen bedeuten, dass das MLP 100 Neurone in der 2. Schicht und 15 Neurone in der 3. Schicht hat. Der Output sind 2 Neurone: Je eins per Klasse. </p>"),
+        ui.br(), ui.br(),
+        ui.output_image("architecture",fill=True),
+        ui.HTML("<p>Neurone sind als Kreise dargestellt. Die Abbildung zeigt nicht alle Gewichte des Netzwerkes. Jedes Neuron im Input ist mit jedem Neuron in der 1. Schicht verbunden. Jedes Neuron in der 1. Schicht ist mit jedem Neuron in der 2. Schicht verbunden usw.. Die Anzahl der <Parameter>, die in einem MLP trainiert (also optimiert) werden sind abhängig von der Anzahl der Neurone. Diese Parameter sind die Verbindungen/Gewichte zwischen den Neuronen, daher hat ein MLP wie oben $30 \cdot 100 \cdot 15$ Parameter.</p>"),
+        ui.HTML("<p>Erinnern Sie sich an den Zusammenhang zwischen der Anzahl der Parameter und der Performance der Regression? Denken Sie der Zusammenhang hier ist auch zo gegeben? Woran merkt man, dass das trainierte Netzwerk zu groß ist? </p>"),
+        ui.HTML("<p>Das folgende Menu erlaubt Ihnen verschiedene Architekturen auszuwählen und zu trainieren. Die Ergbenisse werden Ihnen in der Tabelle darunter angezeigt. Was fällt Ihnen auf? Welche Performance empfinden Sie als akzeptabel?"),
         ui.input_select("MLP_param", "Architektur:", ["(100,15,)","(100,5,)","(100,50,)","(50,15,)","(200,15,)"] ),
         ui.output_ui("acc_table"),ui.br(), ui.br(),
-        "Da es nicht möglich ist die Entscheidungsfunktion mit hinsicht auf alle 30 Merkmale darzustellen, benuzten wir im folgenden nur 2 Merkmale. Können sie durch die drop-down selection selber auswählen.",
-        "Die Visualisierung zeigt die Wahrscheinlichkeit mit der ein Datenpunkt als benign klassifiziert wird. Je tiefer der Rotton desto sicherer ist der Algorithmus, dass es sich um einen benign Tumor handelt. Je tieder der Blauton, desto wahrscheinlicher ist der Datenpunkt malignant.",
-        "Weiß indiziert eine Klassenzugehörigkeit von 0.5 bzw. 50%. Dies bedeutet, dass der Algorithmus sich nicht sicher ist, welcher Klasse der Datenpunkt angehört.", 
-        "Unten können Sie wieder auswählen, welche 2 Merkmale vom MLP berücksichtigt werden.", ui.br(), ui.br(),
-        "Wie würden Sie die Entscheidungsfunktion des MLPs beschreiben?", 
-        ui.input_select("first2D_feature", "1. Merkmal:", choices = data['data'].keys().tolist()),
-        ui.input_select("second2D_feature", "2. Merkmal:", choices = data['data'].keys().tolist()),
-        ui.output_plot("clf_2D"))
+        )
         
     ))
  
@@ -237,16 +229,16 @@ simple_AI_page = ui.page_fluid(
 #all render functions
 def server_AI_examples(input): 
     import matplotlib.style as style
-    style.use('seaborn-v0_8-colorblind')
+    style.use('seaborn-colorblind')
     import matplotlib.pyplot as plt
     from matplotlib.colors import ListedColormap
     cm_bright = ListedColormap(["#0000FF","#FF0000"])
 
-    style.use('seaborn-v0_8-bright')
+    style.use('seaborn-bright')
     bright = plt.rcParams['axes.prop_cycle'].by_key()['color']
     cm_bright3D = ListedColormap([bright[0],bright[1],bright[2]])
 
-    style.use('seaborn-v0_8-colorblind')
+    style.use('seaborn-colorblind')
     palette = plt.rcParams['axes.prop_cycle'].by_key()['color']
     cm_3D = ListedColormap([palette[0],palette[1],palette[2] ])
 
@@ -282,12 +274,12 @@ def server_AI_examples(input):
         ax[0].plot(dat_train[0], pred_train, color = palette[2], label = 'Model')
         if input.show_gt(): 
             ax[0].plot(real_data[0], real_data[1], color = 'k', label = 'Ground Truth')
-        ax[0].set_title("Trainings-MSE: "+str(calc_MSE(dat_train[1], pred_train)))
+        ax[0].set_title("Trainings-MSE: "+str(round(calc_MSE(dat_train[1], pred_train),2)))
         ax[1].scatter(dat_test[0], dat_test[1], color = palette[0], label = 'Daten')
         ax[1].scatter(dat_test[0], pred_test, color = palette[2], label = 'Model')
         if input.show_gt(): 
             ax[1].plot(real_data[0], real_data[1], color = 'k', label = 'Ground Truth')
-        ax[1].set_title("Test-MSE: "+str(calc_MSE(dat_test[1], pred_test)))
+        ax[1].set_title("Test-MSE: "+str(round(calc_MSE(dat_test[1], pred_test),2)))
         ax[0].set_xlabel("Min. Lernen")
         ax[0].set_ylabel("% Verbesserung")
         ax[0].legend(bbox_to_anchor=(1.0, 1.0), loc='upper left',  frameon = False)
@@ -395,7 +387,55 @@ def server_AI_examples(input):
             ax.set_xlabel("Hustenfrequenz")
             ax.set_ylabel("Sportfrequenz")
             
-        
+    @render.plot
+    def toy_data_3D_static():
+
+        nndata, data, _, _, _, _, _ = gen_data_clustering(n_cluster, n_cluster, n_cluster)
+
+        labels = np.zeros([n_cluster*3])
+        labels[n_cluster:n_cluster*2] = 1
+        labels[n_cluster*2:] = 2
+
+        x_train, x_test, y_train, y_test = train_test_split(data, labels, test_size = 0.2, random_state= 42)
+
+        clf = MLPClassifier(hidden_layer_sizes = (10,), random_state=42, max_iter = 1000).fit(x_train, y_train)
+
+        samples = 100
+        x_decs, y_decs = np.meshgrid(np.linspace(data[:,0].min()-0.5, data[:,0].max()+0.5,samples), np.linspace(data[:,1].min()-0.5, data[:,1].max()+0.5,samples))
+        decs = clf.predict_proba(np.column_stack([x_decs.ravel(), y_decs.ravel()]))
+        decs0 = decs[:,0]
+        decs1 = decs[:,1]
+        decs2 = decs[:,2]
+        #compile them into one map which indicates which class is most likely: 
+        class_regime = np.zeros(decs[:,1].shape)
+        for i in range(decs.shape[0]): 
+            if decs0[i] > decs1[i]: 
+                if decs0[i] > decs2[i]:
+                    class_regime[i] = 0.0
+                elif decs2[i] > decs1[i]:
+                    class_regime[i] = 1.0
+            elif decs1[i] > decs2[i]: 
+                class_regime[i] = 0.5
+
+        class_regime = class_regime.reshape(x_decs.shape)
+        with plt.xkcd(): 
+            fig, ax = plt.subplots(1,1)
+            ax.contourf(x_decs, y_decs, class_regime, cmap = cm_3D, alpha = 0.75)
+            scatter1 = ax.scatter(x_train[:,0],x_train[:,1], c = (y_train*0.5), cmap = cm_bright3D , edgecolors = 'k')
+            handles = scatter1.legend_elements()[0]
+            l1 = ax.legend(handles, ['Gruppe 1','Grupp 2','Gruppe 3'],title= 'Trainingsset', bbox_to_anchor=(1.0, 1.0), loc='upper left',  frameon = False)
+            l1._legend_box.align = 'left'
+            ax2 = ax.twinx()
+            scatter2 = ax2.scatter(x_test[:,0],x_test[:,1], c = (y_test*0.5), cmap = cm_bright3D , edgecolors = 'k',marker = "*" )
+            ax2.get_yaxis().set_visible(False)
+            handles = scatter2.legend_elements()[0]
+            l2 = ax2.legend(handles, ['Gruppe 1','Grupp 2','Gruppe 3'],title= 'Testset', bbox_to_anchor=(1.0,0.6), loc='upper left',  frameon = False)
+            l2._legend_box.align = 'left'
+            ax.annotate("Prediktion inkorrekt",  xytext=(0.5, 1.2), xy=(-.1, 1.65),arrowprops=dict(arrowstyle="->"), fontsize = 10)
+            ax.annotate("Prediktion korrekt",  xytext=(1.5, -2), xy=(1.25, -1.55),arrowprops=dict(arrowstyle="->"), fontsize = 10)
+            ax.annotate("Trainingsfehler",  xytext=(0.8, 0.2), xy=(-0.1, 0.55),arrowprops=dict(arrowstyle="->"), fontsize = 10)
+            ax.set_xlabel("Hustenfrequenz")
+            ax.set_ylabel("Sportfrequenz")
 
     @render.plot
     def toy_data_3D():
@@ -428,17 +468,23 @@ def server_AI_examples(input):
                 class_regime[i] = 0.5
 
         class_regime = class_regime.reshape(x_decs.shape)
+        acc = clf.score(x_test, y_test)
 
         fig, ax = plt.subplots(1,1)
         ax.contourf(x_decs, y_decs, class_regime, cmap = cm_3D, alpha = 0.75)
         scatter1 = ax.scatter(x_train[:,0],x_train[:,1], c = (y_train*0.5), cmap = cm_bright3D , edgecolors = 'k')
         handles = scatter1.legend_elements()[0]
-        ax.legend(handles, ['Gruppe 1','Grupp 2','Gruppe 3'],title= 'Trainingsset', bbox_to_anchor=(1.0, 1.0), loc='upper left',  frameon = False)
-        scatter2 = ax.scatter(x_test[:,0],x_test[:,1], c = (y_test*0.5), cmap = cm_bright3D , edgecolors = 'k',marker = "*" )
+        l1 = ax.legend(handles, ['Gruppe 1','Grupp 2','Gruppe 3'],title= 'Trainingsset', bbox_to_anchor=(1.0, 1.0), loc='upper left',  frameon = False)
+        l1._legend_box.align = 'left'
+        ax2 = ax.twinx()
+        scatter2 = ax2.scatter(x_test[:,0],x_test[:,1], c = (y_test*0.5), cmap = cm_bright3D , edgecolors = 'k',marker = "*" )
+        ax2.get_yaxis().set_visible(False)
         handles = scatter2.legend_elements()[0]
-        ax.legend(handles, ['Gruppe 1','Grupp 2','Gruppe 3'],title= 'Testset', bbox_to_anchor=(1.0,0.5), loc='upper left',  frameon = False)
+        l2 = ax2.legend(handles, ['Gruppe 1','Grupp 2','Gruppe 3'],title= 'Testset', bbox_to_anchor=(1.0,0.6), loc='upper left',  frameon = False)
+        l2._legend_box.align = 'left'
         ax.set_xlabel("Hustenfrequenz")
         ax.set_ylabel("Sportfrequenz")
+        ax.set_title("Accuracy: "+str(acc)+"%")
  
 
 
@@ -447,16 +493,35 @@ def server_AI_examples(input):
     def class_data(): 
         return render.DataGrid(data['data'].head(5))
 
+    @render.image
+    def architecture():
+        from pathlib import Path
+        dir = Path(__file__).resolve().parent
+        img: ImgData = {"src": str(dir / "architektur.png")}
+        return img
+
+
     @render.plot()
-    def class_plot_2D():
+    def class_plot_3D():
+        
         x_data = data['data'][input.first_feature()]
         y_data = data['data'][input.second_feature()]
-        fig, ax = plt.subplots(1,1)
-        scatter = ax.scatter(x_data, y_data, c = labels, cmap = cm_bright)
+        z_data = data['data'][input.third_feature()]
+        fig = plt.figure()
+        ax = fig.add_subplot(projection='3d')
+        scatter = ax.scatter3D(x_data, y_data, z_data, c = labels, cmap = cm_bright)
         handles = scatter.legend_elements()[0]
         ax.legend(handles, ['malignant','benign',],bbox_to_anchor=(1.0, 1.0), loc='upper left',  frameon = False)
         ax.set_xlabel(input.first_feature())
         ax.set_ylabel(input.second_feature())
+        ax.set_zlabel(input.third_feature())
+
+    @render.ui
+    def exp_table():
+        row_labels = ["Malignant", "Benign"]
+        col_labels = ["Malignant", "Benign"]
+        tab_dat = [["Spezifität",ui.HTML("&beta;-Fehler")],[ui.HTML("&alpha;-Fehler"), "Sensitivität"]]
+        return make_table(tab_dat,row_labels,col_labels,col_super=["","Tumor ist"],row_super="Diagnostiziert als",)
 
 
     @render.ui
@@ -465,19 +530,6 @@ def server_AI_examples(input):
         row_labels = ["Malignant", "Benign"]
         col_labels = ["Malignant", "Benign"]
         return make_table(tab_dat,row_labels,col_labels,col_super=["Accuracy: "+str(acc_dat)+"%","Tumor ist"],row_super="Diagnostiziert als",)
-
-    @render.plot()
-    def clf_2D(): 
-        
-        data_points, decs_bound , x_dat, y_dat =  train_clf_bcw(features = [input.first2D_feature(),input.second2D_feature()])
-
-        fig, ax = plt.subplots(1,1)
-        ax.contourf(x_dat, y_dat, decs_bound, cmap = 'RdBu_r', alpha = 0.75 )
-        scatter = ax.scatter(data_points[:,0],data_points[:,1], c = labels, cmap = cm_bright , edgecolors = 'k')
-        handles = scatter.legend_elements()[0]
-        ax.legend(handles, ['malignant','benign',],bbox_to_anchor=(1.0, 1.0), loc='upper left',  frameon = False)
-        ax.set_xlabel(input.first2D_feature())
-        ax.set_ylabel(input.second2D_feature())
 
 
 

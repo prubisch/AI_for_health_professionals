@@ -14,8 +14,9 @@ app_ui = ui.page_navbar(
     ui.nav_panel("Grundbausteine von KI", "Objektiv, Trainingsdaten, Architektur, Training Algorithmus"
     ),
     ui.nav_panel("Einfach(st)e KI Beispiele", simple_AI_page),
-    ui.nav_panel("Die Wichtigkeit der Trainingsdaten", bias_page), 
-    ui.nav_panel("Katastrophales Vergessen", "Kontinuierliches Lernen und One-shot Lernen"),
+    ui.nav_panel("Bias in den Trainingsdaten", bias_page), 
+    ui.nav_panel("Mathematische Grundlagen von Parameteroptimierung", "Gradient-Descent Basics"),
+    ui.nav_panel("Referenzen", "ref list"),
     title = "KI für Gesundheitsberufe", 
     position = 'static_top'
 )
