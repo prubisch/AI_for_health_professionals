@@ -5,8 +5,3 @@ sklearn
 ast
 numpy
 fastparquet
-simple_AI_examples
-bias
-basics_AI
-bonus
-refs
