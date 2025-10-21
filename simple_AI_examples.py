@@ -229,16 +229,16 @@ simple_AI_page = ui.page_fluid(
 #all render functions
 def server_AI_examples(input): 
     import matplotlib.style as style
-    style.use('seaborn-colorblind')
+    style.use('seaborn-v0_8-colorblind')
     import matplotlib.pyplot as plt
     from matplotlib.colors import ListedColormap
     cm_bright = ListedColormap(["#0000FF","#FF0000"])
 
-    style.use('seaborn-bright')
+    style.use('seaborn-v0_8-bright')
     bright = plt.rcParams['axes.prop_cycle'].by_key()['color']
     cm_bright3D = ListedColormap([bright[0],bright[1],bright[2]])
 
-    style.use('seaborn-colorblind')
+    style.use('seaborn-v0_8-colorblind')
     palette = plt.rcParams['axes.prop_cycle'].by_key()['color']
     cm_3D = ListedColormap([palette[0],palette[1],palette[2] ])
 
