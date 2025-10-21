@@ -448,7 +448,7 @@ def server_AI_examples(input):
 
         x_train, x_test, y_train, y_test = train_test_split(data, labels, test_size = 0.2, random_state= 42)
 
-        clf = MLPClassifier(hidden_layer_sizes = (np.int(input.layers()),), random_state=42, max_iter = 1000 ).fit(x_train, y_train)
+        clf = MLPClassifier(hidden_layer_sizes = (int(input.layers()),), random_state=42, max_iter = 1000 ).fit(x_train, y_train)
 
         samples = 100
         x_decs, y_decs = np.meshgrid(np.linspace(data[:,0].min()-0.5, data[:,0].max()+0.5,samples), np.linspace(data[:,1].min()-0.5, data[:,1].max()+0.5,samples))
