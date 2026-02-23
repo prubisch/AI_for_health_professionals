@@ -84,8 +84,6 @@ def plot_confusion_matrixes(path_mat):
 
 
 def server_bias(input): 
-    import matplotlib.style as style
-    style.use('seaborn-v0_8-colorblind')
     
     @render.image
     def CIFAR10():
