@@ -11,9 +11,9 @@ from gradient_descent import gradient_descent_page, server_gradient_descent
 
 import seaborn as sns
 import matplotlib.style as style
-style.use('seaborn-colorblind')
+#style.use('seaborn-colorblind')
 #or if different python version
-#style.use('seaborn-v0_8-colorblind')
+style.use('seaborn-v0_8-colorblind')
 
 
 app_ui = ui.page_navbar(
