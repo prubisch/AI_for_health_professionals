@@ -236,7 +236,7 @@ def server_AI_examples(input):
     from matplotlib.colors import ListedColormap
     cm_bright = ListedColormap(["#0000FF","#FF0000"])
 
-    style.use('seaborn-bright')
+    style.use('seaborn-v0_8-bright')
     bright = plt.rcParams['axes.prop_cycle'].by_key()['color']
     cm_bright3D = ListedColormap([bright[0],bright[1],bright[2]])
 
