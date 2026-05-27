@@ -78,25 +78,32 @@ test_all_adv = CIFAR10ConditionalPatch(np.arange(10, dtype = int), root='./adver
 train_norm = torchvision.datasets.CIFAR10(root= './standard_data', train = True, download = True, transform = norming)
 test_norm = torchvision.datasets.CIFAR10(root= './standard_data', train = False, download = True, transform = norming)
 
-#######prepare the dataloaders for our optim and eval loops
-
-class_cat = 3
-all_targets= np.array(train_norm.targets)
-all_inds = np.arange(all_targets.shape[0])
-#all indices of cats
-cat_indices = all_inds[all_targets == class_cat]
-all_wo_cats = np.delete(all_inds,cat_indices)
-#subsample this and add remaining non cat indices to this: 
 rng = np.random.RandomState(seed = 42)
-n_cats = cat_indices.shape[0]
-perc = 0.2 #reduce cats to 20% of the other categories
-sub_cats = rng.choice(cat_indices,int(n_cats * perc), replace = False ) #without replacement
 
-new_inds = np.concatenate([all_wo_cats, sub_cats])
+#######prepare the dataloaders for our optim and eval loops
+def get_reduced_dataset(category, perc): 
+    #indicator for desired catory, 
+    #percentage of down_sample in percentiles
+    all_targets= np.array(train_norm.targets)
+    all_inds = np.arange(all_targets.shape[0])
+
+    #all indices of category
+    cat_indices = all_inds[all_targets == category]
+    all_wo_cats = np.delete(all_inds,cat_indices)
+    #subsample this and add remaining non cat indices to this: 
+    
+    n_cats = cat_indices.shape[0]
+    sub_cats = rng.choice(cat_indices,int(n_cats * perc), replace = False ) #without replacement
+
+    new_inds = np.concatenate([all_wo_cats, sub_cats])
 
 
-train_red = torch.utils.data.Subset(train_norm, list(new_inds))
+    train_red = torch.utils.data.Subset(train_norm, list(new_inds))
 
+    return train_red
+
+#prepares a dataloader for a testset of only cat images
+class_cat = 3
 all_targets= np.array(test_all_adv.targets)
 all_inds = np.arange(all_targets.shape[0])
 #all indices of cats
@@ -120,7 +127,7 @@ test_advers = torch.utils.data.DataLoader(test_dirt, batch_size = 1, shuffle = F
 test_uncond_advers = torch.utils.data.DataLoader(test_red_adv, batch_size = 1, shuffle = False, num_workers=2)
 test_only_cats_advers = torch.utils.data.DataLoader(test_only_cats_adv, batch_size = 1, shuffle = False, num_workers=2)
 
-train_reduced = torch.utils.data.DataLoader(train_red, batch_size=batch,shuffle=True, num_workers=2)
+
 test_loader = torch.utils.data.DataLoader(test_norm, batch_size=1,shuffle=False, num_workers=2)
 
 
@@ -311,21 +318,29 @@ retraining = False
 if retraining: 
     train_network(train_loader, 'standard_trained')
 
-    train_network(train_reduced, 'unbalanced')
 
     train_network(train_advers, 'adversarial_trained')
+
+retrain_reduced = False
+if retrain_reduced: 
+    for n_cat in [0,3,5,9]: 
+        for percentile in np.arange(0.1,1.0, 0.1): 
+            train_red = get_reduced_dataset(n_cat, percentile)
+            train_reduced = torch.utils.data.DataLoader(train_red, batch_size=batch,shuffle=True, num_workers=2)
+            train_network(train_reduced, labels_map[n_cat]+'_'+str(percentile))
+            test_network(test_loader, labels_map[n_cat]+'_'+str(percentile), 'standard_images')
+            plot_confusion_matrixes('trained_networks/'+labels_map[n_cat]+'_'+str(percentile)+'_standard_images_confusion_matrix.npz')
 
 
 testing  = False
 if testing: 
 
     test_network(test_loader, 'standard_trained', 'standard_images')
-    test_network(test_loader, 'unbalanced', 'standard_images')
     test_network(test_loader, 'adversarial_trained', 'standard_images')
     print('Test score on adversarial testset')
     test_network(test_advers, 'adversarial_trained', 'adversarial_images')
 
-save_examples = True
+save_examples = False
 
 if save_examples: 
     safe_example_images(test_loader, 'standard_images')
@@ -341,7 +356,6 @@ conf_mats = False
 
 if conf_mats: 
     plot_confusion_matrixes('trained_networks/standard_trained_standard_images_confusion_matrix.npz')
-    plot_confusion_matrixes('trained_networks/unbalanced_standard_images_confusion_matrix.npz')
     plot_confusion_matrixes('trained_networks/adversarial_trained_standard_images_confusion_matrix.npz')
     plot_confusion_matrixes('trained_networks/adversarial_trained_adversarial_images_confusion_matrix.npz')
 

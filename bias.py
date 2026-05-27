@@ -30,10 +30,14 @@ bias_page = ui.page_fluid(
         ui.HTML("<p>Wir trainieren zuerst unser CNN mit den Standard-Datesatz, um einen Vergleichswert neben dem Zufallslevel von 10% zu haben. Die nachfolgende Grafik zeigt Ihnen die generelle Accuracy (Titel) und eine Confusion-Matrix. Die Confusion-Matrix zeigt die Aufteilung pro Klasse der Prediktionen. Daher können Sie klassenweise einsehen, mit welcher anderen Klasse die Testbilder am häufigsten verwechselt (also confused) werden.</p>"),
         ui.output_plot("standard_confusion"),
         ui.HTML("<p> Wie schätzen Sie diese Performance ein (z.B. im Vergleich zum Zufallsniveau)? Woran könnte es liegen, dass Hunde zu 26 % als Katzen misklassifiziert werden? </p>"), 
-        ui.HTML("Die Trainingsdaten enthalten die gleiche Anzahl an Bildern von jeder Klasse. Wie beeinflusst es die Performance, wenn wir die Anzahl der Katzen bilder auf 20% der Anzahl jeder anderen Klassenbeispiele reduzieren?</p>"), 
+        ui.HTML("Die Trainingsdaten enthalten die gleiche Anzahl an Bildern von jeder Klasse. In der Realität können wir nicht immer sicher stellen, dass alle Klassen gleichhäfig vorkommen. Denken Sie an Krankheits- und Symptominzidenzen: Wodruch kann die Verteilung der Trainingsdaten beeinflusst werden? Warum ist diese nicht gleichmäßig? </p>"), 
+        ui.HTML("<p>Diskutieren Sie: Wie beeinflusst es die Performance, wenn wir die Anzahl der Beispiele einer Klasse, z.B. der Katzen, verringern? </p>"), 
         ui.br(),
-        ui.HTML("<p> Mit dem Schieber trainieren Sie ein Netzwerk mit der selben Architektur wie unser Standard-CNN. Allerdings ist die Anzahl der Katenbilder auf 20% reduziert in unseren Traininsdaten. Vergleichen Sie die Performance und Confusionmatrix von diesem Red-CNN zum Standard-CNN."),
-        ui.input_switch("show_reduced", "Trainiere & Test Red-CNN", False),
+
+
+        ui.HTML("<p> Mit den Schaltflächen können Sie auswählen, welche Kategorie/Klasse (Katze, Hund, Flugzeug oder Truck) auf wie viel Prozent reduziert wird in den Trainingsdaten. Vergleichen Sie die Performance und Confusionmatrix von diesem Red-CNN miteinander und dem Standard-CNN (uniform verteilte Trainingsdaten). Was sind die Auswirkungen der Reduzierung? Was fällt ihn bei den unterschiedlichen Klassen auf? "),
+        ui.input_select("class_reduced", "Kategorie:", choices = ('Cat', 'Dog', 'Airplane', 'Truck')),
+        ui.input_select("prc_reduced", "Reduziert auf (%):", choices = np.arange(10,100,10).tolist()),
         ui.output_plot("reduced_confusion"), 
         ui.HTML("<p>Denken Sie an den Leitspruch '<i>Wenn Sie Hufgeräusche hören, denken Sie an Pferde nicht Zebras.</i>' Was bedeuten Zebras für die Trainings- und Testdatenverteilung? </p>"),
         ui.HTML("<p>Denken Sie an die Misklassifizierung im Standard-CNN zurück. Denken Sie diese Fälle können auch bei der Klassifizierung von psychologischen Krankheiten auftreten? Warum? </p>")
@@ -128,8 +132,7 @@ def server_bias(input):
 
     @render.plot
     def reduced_confusion():
-        if input.show_reduced(): 
-            plot_confusion_matrixes('trained_networks/unbalanced_standard_images_confusion_matrix.npz')
+        plot_confusion_matrixes('trained_networks/'+input.class_reduced()+'_'+str(np.round(float(input.prc_reduced())*0.01,1))+'_standard_images_confusion_matrix.npz')
 
 
     @render.plot
